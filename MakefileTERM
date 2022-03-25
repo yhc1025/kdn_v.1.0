@@ -1,0 +1,123 @@
+CROSS_TOOL 	= arm-buildroot-linux-uclibcgnueabihf-
+CC 		= $(CROSS_TOOL)gcc
+CXX 		= $(CROSS_TOOL)g++
+LINK 		= $(CROSS_TOOL)g++
+AR 		= $(CROSS_TOOL)ar cqs
+DEL_FILE      	= rm -rf
+CP_FILE      	= cp -a 
+
+CFLAGS   	= -pipe -fPIC -W -O2 -lncurses -lepowercrypto -lcrypto -DDEVICE_ROLE=2
+CXXFLAGS 	= $(CFLAGS) -std=c++11
+LFARGS 		= -O2
+
+INCPATH       = -I../include		\
+
+LIBPATH       = -L../lib		\
+
+OBJECTS       =   TB_aes_evp.o		\
+                  TB_wrapper.o		\
+                  TB_elapse.o		\
+                  TB_uart.o		\
+                  TB_util.o		\
+                  TB_wisun.o		\
+                  TB_wisun_util.o	\
+                  TB_sys_uart.o		\
+                  TB_sys_gpio.o		\
+                  TB_sys_wdt.o		\
+                  TB_timer.o	        \
+                  TB_timer_util.o	\
+		  TB_inverter.o		\
+		  TB_modbus.o		\
+		  TB_led.o		\
+                  TB_j11.o		\
+                  TB_j11_util.o		\
+                  TB_msg_queue.o	\
+                  TB_packet.o		\
+                  TB_modem.o		\
+                  TB_psu.o		\
+                  TB_lte.o		\
+                  TB_setup.o		\
+                  TB_log.o		\
+                  TB_debug.o		\
+                  TB_net_queue.o	\
+                  TB_kcmvp.o		\
+                  TB_ping.o		\
+                  TB_crc.o		\
+                  TB_rb.o		\
+                  TB_login.o		\
+                  TB_ui.o		\
+                  TB_rssi.o		\
+                  TB_at.o		\
+                  TB_msgbox.o		\
+                  TB_resource.o		\
+                  TB_ems.o		\
+                  TB_frtu.o		\
+                  TB_optical.o		\
+                  TB_test.o		\
+                  main.o
+
+RESULT_TEST    = kdn_term
+RESULT         = kdn
+RESULT_HASH    = kdn_hash
+RESULT_TAR     = kdn.tar
+RESULT_GZIP    = kdn.tar.gz
+RESULT_GZIP_TEST= _term_kdn.tar.gz
+RESULT_VALID   = valid_check
+RESULT_UPDATE  = fwupdate
+PROG_HASH      = md5sum
+PROG_TAR       = tar
+PROG_GZIP      = gzip
+
+first: all
+####### Implicit rules
+
+.SUFFIXES: .o .c .cpp .cc .cxx .C
+
+.cpp.o:
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o "$@" "$<"
+
+.cc.o:
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o "$@" "$<"
+
+.cxx.o:
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o "$@" "$<"
+
+.C.o:
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o "$@" "$<"
+
+.c.o:
+	$(CC) -c $(CFLAGS) $(INCPATH) -o "$@" "$<"
+
+
+all: 		$(RESULT) fwupdate valid_check install 
+
+$(RESULT): 	$(OBJECTS)
+	$(LINK) $(LFLAGS) -o $(RESULT) $(OBJECTS) $(LIBPATH) $(CFLAGS)
+	-$(CP_FILE) $(RESULT) $(RESULT_TEST)
+
+clean: fwupdate_clean valid_check_clean
+	-$(DEL_FILE) $(RESULT_TEST) $(RESULT) $(OBJECTS) $(RESULT_HASH) $(RESULT_TAR) $(RESULT_GZIP)
+	-$(DEL_FILE) $(RESULT_VALID) $(RESULT_UPDATE)
+	-$(DEL_FILE) $(RESULT_TEST)
+	-$(DEL_FILE) fw/terminal/$(RESULT_GZIP)
+
+fwupdate_clean:
+	cd update; $(MAKE) clean
+
+valid_check_clean:
+	cd valid; $(MAKE) clean
+
+fwupdate:
+	cd update; $(MAKE)
+
+valid_check:
+	cd valid; $(MAKE)
+
+install:	$(RESULT)
+	$(PROG_HASH) $(RESULT) > $(RESULT_HASH)
+	$(PROG_TAR) cvf $(RESULT_TAR) $(RESULT) $(RESULT_HASH) $(RESULT_VALID) $(RESULT_UPDATE)
+	$(PROG_GZIP) $(RESULT_TAR)
+	-$(CP_FILE) $(RESULT_GZIP) fw/terminal/$(RESULT_GZIP)
+	-$(CP_FILE) $(RESULT) $(RESULT_TEST)
+	@echo "install	[OK]"
+
